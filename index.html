@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Penginputan Nilai Siswa</title>
+    <!-- Tambahkan SheetJS untuk export Excel -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        /* Style yang sudah ada sebelumnya */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a73e8;
+            margin-bottom: 30px;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #444;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="search"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        .button-group {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #1a73e8;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #1557b0;
+        }
+
+        .export-btn {
+            background-color: #28a745;
+        }
+
+        .stats {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        @media screen and (max-width: 600px) {
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistem Penginputan Nilai Siswa</h1>
+
+        <div class="form-group">
+            <label for="nama">Nama Siswa:</label>
+            <input type="text" id="nama" name="nama" required>
+        </div>
+
+        <div class="form-group">
+            <label for="nilai">Nilai:</label>
+            <input type="number" id="nilai" name="nilai" min="0" max="100" required>
+        </div>
+
+        <div class="button-group">
+            <button onclick="tambahData()">Tambah Data</button>
+            <button onclick="exportToExcel()" class="export-btn">Export ke Excel</button>
+        </div>
+
+        <div class="search-container">
+            <label for="searchInput">Cari Siswa:</label>
+            <input type="search" id="searchInput" placeholder="Masukkan nama siswa..." oninput="cariSiswa()">
+        </div>
+
+        <div class="stats">
+            <h3>Statistik Nilai</h3>
+            <p>Jumlah Siswa: <span id="jumlahSiswa">0</span></p>
+            <p>Nilai Rata-rata: <span id="nilaiRataRata">0</span></p>
+            <p>Nilai Tertinggi: <span id="nilaiTertinggi">0</span></p>
+            <p>Nilai Terendah: <span id="nilaiTerendah">0</span></p>
+        </div>
+
+        <table id="tabelNilai">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Siswa</th>
+                    <th>Nilai</th>
+                    <th>Grade</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data akan ditambahkan melalui JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let dataSiswa = [];
+
+        // Load data dari localStorage saat halaman dimuat
+        window.onload = function() {
+            const savedData = localStorage.getItem('dataSiswa');
+            if (savedData) {
+                dataSiswa = JSON.parse(savedData);
+                updateTabel();
+                updateStatistik();
+            }
+        };
+
+        function hitungGrade(nilai) {
+            if (nilai >= 90) return 'A';
+            else if (nilai >= 80) return 'B';
+            else if (nilai >= 70) return 'C';
+            else if (nilai >= 60) return 'D';
+            else return 'E';
+        }
+
+        function tambahData() {
+            const nama = document.getElementById('nama').value;
+            const nilai = parseFloat(document.getElementById('nilai').value);
+
+            if (!nama || isNaN(nilai) || nilai < 0 || nilai > 100) {
+                alert('Mohon isi data dengan benar! Nilai harus antara 0-100');
+                return;
+            }
+
+            const siswa = {
+                nama: nama,
+                nilai: nilai,
+                grade: hitungGrade(nilai)
+            };
+
+            dataSiswa.push(siswa);
+            
+            // Simpan ke localStorage
+            localStorage.setItem('dataSiswa', JSON.stringify(dataSiswa));
+            
+            updateTabel();
+            updateStatistik();
+            resetForm();
+        }
+
+        function hapusData(index) {
+            dataSiswa.splice(index, 1);
+            localStorage.setItem('dataSiswa', JSON.stringify(dataSiswa));
+            updateTabel();
+            updateStatistik();
+        }
+
+        function updateTabel(dataToShow = dataSiswa) {
+            const tbody = document.querySelector('#tabelNilai tbody');
+            tbody.innerHTML = '';
+
+            dataToShow.forEach((siswa, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${siswa.nama}</td>
+                    <td>${siswa.nilai}</td>
+                    <td>${siswa.grade}</td>
+                    <td><button onclick="hapusData(${index})" style="background-color: #dc3545;">Hapus</button></td>
+                `;
+            });
+        }
+
+        function updateStatistik() {
+            const jumlahSiswa = dataSiswa.length;
+            const nilaiTotal = dataSiswa.reduce((sum, siswa) => sum + siswa.nilai, 0);
+            const rataRata = jumlahSiswa > 0 ? (nilaiTotal / jumlahSiswa).toFixed(2) : 0;
+            const nilaiTertinggi = jumlahSiswa > 0 ? Math.max(...dataSiswa.map(s => s.nilai)) : 0;
+            const nilaiTerendah = jumlahSiswa > 0 ? Math.min(...dataSiswa.map(s => s.nilai)) : 0;
+
+            document.getElementById('jumlahSiswa').textContent = jumlahSiswa;
+            document.getElementById('nilaiRataRata').textContent = rataRata;
+            document.getElementById('nilaiTertinggi').textContent = nilaiTertinggi;
+            document.getElementById('nilaiTerendah').textContent = nilaiTerendah;
+        }
+
+        function cariSiswa() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const hasilPencarian = dataSiswa.filter(siswa => 
+                siswa.nama.toLowerCase().includes(searchTerm)
+            );
+            updateTabel(hasilPencarian);
+        }
+
+        function exportToExcel() {
+            if (dataSiswa.length === 0) {
+                alert('Tidak ada data untuk di-export!');
+                return;
+            }
+
+            // Format data untuk Excel
+            const ws = XLSX.utils.json_to_sheet(dataSiswa.map((siswa, index) => ({
+                'No': index + 1,
+                'Nama Siswa': siswa.nama,
+                'Nilai': siswa.nilai,
+                'Grade': siswa.grade
+            })));
+
+            // Buat workbook baru
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Data Nilai Siswa');
+
+            // Generate file Excel
+            XLSX.writeFile(wb, 'Data_Nilai_Siswa.xlsx');
+        }
+
+        function resetForm() {
+            document.getElementById('nama').value = '';
+            document.getElementById('nilai').value = '';
+        }
+    </script>
+</body>
+</html>
